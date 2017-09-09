@@ -63,6 +63,32 @@ def test_code(test_case):
     ## 
 
     ## Insert IK code here!
+    d1, d2, d3, d4, d5, d6, d7 = symbols('d1:8')
+    a0, a1, a2, a3, a4, a5, a6 = symbols('a0:7')
+    q1, q2, q3, q4, q5, q6, q7 = symbols('q1:8')
+    alp0, alp1, alp2, alp3, alp4, alp5, alp6 = symbols('alp0:7')
+
+    #DH table
+
+    DH_table = { 
+            alp0:       0, a0:      0,  d1:  0.75, q1:  q1
+            alp1:-pi/2.0,  a1:   0.35,  d2:     0, q2:  -pi/2.0 + q2
+            alp0:       0, a2:   1.25,  d3:     0, q3:  q3
+            alp0:0,        a3: -0.054,  d4:   1.5, q4:  q4
+            alp0:0,        a4:      0,  d5:     0, q5:  q5
+            alp0:0,        a5:      0,  d6:     0, q6:  q6
+            alp0:0,        a6:      0,  d7: 0.303, q7:  0
+            }
+    T0_1 = Get_TFMartix(d1, a0, q1, alp0)
+    T1_2 = Get_TFMartix(d2, a1, q2, alp1)
+    T2_3 = Get_TFMartix(d3, a2, q3, alp2)
+    T3_4 = Get_TFMartix(d4, a3, q4, alp3)
+    T4_5 = Get_TFMartix(d5, a4, q5, alp4)
+    T5_6 = Get_TFMartix(d6, a5, q6, alp5)
+    T6_EE = Get_TFMartix(d7, a6, q7, alp6)
+
+    T0_EE = T0_1 * T1_2 * T2_3 * T3_4 * T5_6 * T6_EE
+
     
     theta1 = 0
     theta2 = 0
@@ -132,6 +158,13 @@ def test_code(test_case):
         print ("Overall end effector offset is: %04.8f units \n" % ee_offset)
 
 
+def Get_TFMartix(d, a, q, alpha):
+    TF_Matrix = Matrix([
+        [ cos(q),               -sin(q),            0,              a    ],
+        [sin(q)*sin(alpha), cos(q)*cos(alpha), -sin(alpha), -sin(alpha)*d],
+        [sin(q)*sin(alpha), cos(q)*sin(alpha),  cos(alpha),  cos(alpha)*d],
+        [       0,                  0,              0,              1    ]
+        ])
 
 
 if __name__ == "__main__":
