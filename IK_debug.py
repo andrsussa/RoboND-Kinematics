@@ -62,40 +62,131 @@ def test_code(test_case):
     ########################################################################################
     ## 
 
+    print('Defining symbols')
+
     ## Insert IK code here!
     d1, d2, d3, d4, d5, d6, d7 = symbols('d1:8')
     a0, a1, a2, a3, a4, a5, a6 = symbols('a0:7')
     q1, q2, q3, q4, q5, q6, q7 = symbols('q1:8')
     alp0, alp1, alp2, alp3, alp4, alp5, alp6 = symbols('alp0:7')
 
+    print('Reading positions')
+    ##End effector coordinates
+    px = req.poses[x].position.x
+    py = req.poses[x].position.y
+    pz = req.poses[x].position.z
+
+    ## Get RPY angles of end effector
+    print('Getting RPY angles')
+
+    (roll, pitch, yaw) = tf.transformations.euler_from_quaternion([
+        req.poses[x].orientation.x,req.poses[x].orientation.y,req.poses[x].orientation.z,
+        req.poses[x].orientation.w])
+
     #DH table
+    print('Defining DH table')
 
     DH_table = { 
-            alp0:       0, a0:      0,  d1:  0.75, q1:  q1
-            alp1:-pi/2.0,  a1:   0.35,  d2:     0, q2:  -pi/2.0 + q2
-            alp0:       0, a2:   1.25,  d3:     0, q3:  q3
-            alp0:0,        a3: -0.054,  d4:   1.5, q4:  q4
-            alp0:0,        a4:      0,  d5:     0, q5:  q5
-            alp0:0,        a5:      0,  d6:     0, q6:  q6
-            alp0:0,        a6:      0,  d7: 0.303, q7:  0
+            alp0:       0,  a0:      0,  d1:  0.75, q1:  q1,
+            alp1: -pi/2.0,  a1:   0.35,  d2:     0, q2:  -pi/2.0 + q2,
+            alp2:       0,  a2:   1.25,  d3:     0, q3:  q3,
+            alp3: -pi/2.0,  a3: -0.054,  d4:   1.5, q4:  q4,
+            alp4:  pi/2.0,  a4:      0,  d5:     0, q5:  q5,
+            alp5: -pi/2.0,  a5:      0,  d6:     0, q6:  q6,
+            alp6: 0,        a6:      0,  d7: 0.303, q7:  0
             }
-    T0_1 = Get_TFMartix(d1, a0, q1, alp0)
-    T1_2 = Get_TFMartix(d2, a1, q2, alp1)
-    T2_3 = Get_TFMartix(d3, a2, q3, alp2)
-    T3_4 = Get_TFMartix(d4, a3, q4, alp3)
-    T4_5 = Get_TFMartix(d5, a4, q5, alp4)
-    T5_6 = Get_TFMartix(d6, a5, q6, alp5)
-    T6_EE = Get_TFMartix(d7, a6, q7, alp6)
 
-    T0_EE = T0_1 * T1_2 * T2_3 * T3_4 * T5_6 * T6_EE
+    print('Defining transformation matrices')
 
-    
-    theta1 = 0
-    theta2 = 0
-    theta3 = 0
-    theta4 = 0
-    theta5 = 0
-    theta6 = 0
+    T0_1 = Get_TFMartix(d1, a0, q1, alp0).subs(DH_table)
+    T1_2 = Get_TFMartix(d2, a1, q2, alp1).subs(DH_table)
+    T2_3 = Get_TFMartix(d3, a2, q3, alp2).subs(DH_table)
+    T3_4 = Get_TFMartix(d4, a3, q4, alp3).subs(DH_table)
+    T4_5 = Get_TFMartix(d5, a4, q5, alp4).subs(DH_table)
+    T5_6 = Get_TFMartix(d6, a5, q6, alp5).subs(DH_table)
+    T6_EE = Get_TFMartix(d7, a6, q7, alp6).subs(DH_table)
+
+    print('Calculating total transformation matrix')
+
+    T0_EE = T0_1 * T1_2 * T2_3 * T3_4 * T4_5 * T5_6 * T6_EE
+
+
+    r, p, y = symbols('r p y')
+
+    rot_x = Matrix([[1,     0,      0  ],
+                    [0, cos(r), -sin(r)],
+                    [0, sin(r), cos(r)]])
+
+    rot_y = Matrix([[cos(p), 0 ,sin(p)],
+                    [0,      1 ,    0  ],
+                    [-sin(p),0 ,cos(p)]])
+
+    rot_z = Matrix([[cos(y), -sin(y), 0],
+                    [sin(y), cos(y),  0],
+                    [0,      0,       1]])
+
+    rot_err = rot_z.subs(y, radians(180)) * rot_y.subs(p, radians(-90))
+
+    print('Calculating total rotation matrix')
+
+    rot_ee = rot_z * rot_y * rot_x * rot_err
+
+    rot_ee = rot_ee.subs({'r':roll, 'p':pitch, 'y':yaw})
+    ee_vector = Matrix([[px], [py], [pz]])
+
+    print('Calculating coordinates of Wrist Center')
+
+    wc = ee_vector - (0.303) * rot_ee[:,2]
+
+    #calculate geometry for first 3 joints
+
+    print('Calculating geometry for first 3 joints')
+
+    #triangle sides
+
+    A = 1.501 #from URDF file
+    C = 1.25 #from DH table
+    #B = sqrt(pow((sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - DH_table[a1]), 2) + pow(wc[2] - DH_table[d1],2))
+    B = sqrt(pow((sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - 0.35), 2) + pow((wc[2] - 0.75),2))
+    print('Calculating triangle angles')
+
+    #triangle angles
+    a = acos((B*B + C*C - A*A)/ (2 * B * C))
+    b = acos((A*A + C*C - B*B)/ (2 * A * C))
+    c = acos((A*A + B*B - C*C)/ (2 * A * B))
+
+    # to compensate 55mm offset in link4
+    #offset_angle = atan2(0.054, 1.501)
+    offset_angle = 0.036#atan2(0.054, 1.501)
+
+    print('Calculating first 3 thetas')
+
+    theta1 = atan2(wc[1], wc[0])
+    #theta2 = pi/2 - a - atan2(wc[2] - DH_table[d1], sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - DH_table[a1])
+    theta2 = pi/2 - a - atan2(wc[2] - 0.75, sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - 0.35)
+    theta3 = pi/2 - (b + offset_angle)
+
+    print('Calculating rotation matrix for joints 1-3')
+
+    R0_3 = T0_1[0:3, 0:3] * T1_2[0:3, 0:3] * T2_3[0:3, 0:3] 
+    R0_3 = R0_3.evalf(subs={q1: theta1, q2: theta2, q3: theta3})
+    #R0_3 = R0_3.simplify()
+
+    #print(R0_3)
+
+    #print('Inverting R0_3 matrix')
+
+    #R0_3_inv = R0_3.inv("LU")
+
+    print('Calculating rotation matrix for joints 3-6')
+
+    R3_6 = R0_3.inv() * rot_ee
+
+    print('Calculating thetas 3-6')
+
+    theta4 = atan2(R3_6[2,2], -R3_6[0,2])
+    theta5 = atan2(sqrt(R3_6[0,2] * R3_6[0,2] + R3_6[2,2] * R3_6[2,2]), R3_6[1,2])
+    theta6 = atan2(-R3_6[1,1], R3_6[1,0])
 
     ## 
     ########################################################################################
@@ -105,13 +196,14 @@ def test_code(test_case):
     ## as the input and output the position of your end effector as your_ee = [x,y,z]
 
     ## (OPTIONAL) YOUR CODE HERE!
+    FK = T0_EE.evalf(subs={q1: theta1, q2: theta2, q3: theta3, q4: theta4, q5: theta5, q6: theta6})
 
     ## End your code input for forward kinematics here!
     ########################################################################################
 
     ## For error analysis please set the following variables of your WC location and EE location in the format of [x,y,z]
-    your_wc = [1,1,1] # <--- Load your calculated WC values in this array
-    your_ee = [1,1,1] # <--- Load your calculated end effector value from your forward kinematics
+    your_wc = [wc[0],wc[1],wc[2]] # <--- Load your calculated WC values in this array
+    your_ee = [FK[0,3],FK[1,3],FK[2,3]] # <--- Load your calculated end effector value from your forward kinematics
     ########################################################################################
 
     ## Error analysis
@@ -165,6 +257,7 @@ def Get_TFMartix(d, a, q, alpha):
         [sin(q)*sin(alpha), cos(q)*sin(alpha),  cos(alpha),  cos(alpha)*d],
         [       0,                  0,              0,              1    ]
         ])
+    return TF_Matrix
 
 
 if __name__ == "__main__":
