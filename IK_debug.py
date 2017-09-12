@@ -147,32 +147,32 @@ def test_code(test_case):
     A = 1.501 #from URDF file
     C = 1.25 #from DH table
     #B = sqrt(pow((sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - DH_table[a1]), 2) + pow(wc[2] - DH_table[d1],2))
-    B = sqrt(pow((sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - 0.35), 2) + pow((wc[2] - 0.75),2))
+    B = sqrt(pow((sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - DH_table[a1]), 2) + pow((wc[2] - DH_table[d1]),2))
     print('Calculating triangle angles')
 
     #triangle angles
-    a = acos((B*B + C*C - A*A)/ (2 * B * C))
-    b = acos((A*A + C*C - B*B)/ (2 * A * C))
-    c = acos((A*A + B*B - C*C)/ (2 * A * B))
+    a = acos((B*B + C*C - A*A) / (2 * B * C))
+    b = acos((A*A + C*C - B*B) / (2 * A * C))
+    c = acos((A*A + B*B - C*C) / (2 * A * B))
 
     # to compensate 55mm offset in link4
     #offset_angle = atan2(0.054, 1.501)
-    offset_angle = 0.036#atan2(0.054, 1.501)
+    offset_angle = atan2(abs(DH_table[a3]), A)
+
+    print(offset_angle)
 
     print('Calculating first 3 thetas')
 
-    theta1 = atan2(wc[1], wc[0])
-    #theta2 = pi/2 - a - atan2(wc[2] - DH_table[d1], sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - DH_table[a1])
-    theta2 = pi/2 - a - atan2(wc[2] - 0.75, sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - 0.35)
+    theta1 = atan2(wc[1], wc[0]).evalf()
+    print(theta1)
+    theta2 = pi/2 - a - atan2(wc[2] - DH_table[d1], sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - DH_table[a1])
     theta3 = pi/2 - (b + offset_angle)
 
     print('Calculating rotation matrix for joints 1-3')
 
     R0_3 = T0_1[0:3, 0:3] * T1_2[0:3, 0:3] * T2_3[0:3, 0:3] 
     R0_3 = R0_3.evalf(subs={q1: theta1, q2: theta2, q3: theta3})
-    #R0_3 = R0_3.simplify()
 
-    #print(R0_3)
 
     #print('Inverting R0_3 matrix')
 
@@ -180,13 +180,14 @@ def test_code(test_case):
 
     print('Calculating rotation matrix for joints 3-6')
 
-    R3_6 = R0_3.inv() * rot_ee
+    R3_6 = R0_3.inv("LU") * rot_ee
 
     print('Calculating thetas 3-6')
 
-    theta4 = atan2(R3_6[2,2], -R3_6[0,2])
+    theta4 = atan2(R3_6[2,2], -R3_6[0,2]) % ((pi).evalf())
     theta5 = atan2(sqrt(R3_6[0,2] * R3_6[0,2] + R3_6[2,2] * R3_6[2,2]), R3_6[1,2])
-    theta6 = atan2(-R3_6[1,1], R3_6[1,0])
+    theta6 = atan2(-R3_6[1,1], R3_6[1,0]).evalf()#  % ((pi).evalf())
+    print(theta6)
 
     ## 
     ########################################################################################
@@ -253,7 +254,7 @@ def test_code(test_case):
 def Get_TFMartix(d, a, q, alpha):
     TF_Matrix = Matrix([
         [ cos(q),               -sin(q),            0,              a    ],
-        [sin(q)*sin(alpha), cos(q)*cos(alpha), -sin(alpha), -sin(alpha)*d],
+        [sin(q)*cos(alpha), cos(q)*cos(alpha), -sin(alpha), -sin(alpha)*d],
         [sin(q)*sin(alpha), cos(q)*sin(alpha),  cos(alpha),  cos(alpha)*d],
         [       0,                  0,              0,              1    ]
         ])
@@ -262,6 +263,6 @@ def Get_TFMartix(d, a, q, alpha):
 
 if __name__ == "__main__":
     # Change test case number for different scenarios
-    test_case_number = 1
+    test_case_number = 3
 
     test_code(test_cases[test_case_number])
