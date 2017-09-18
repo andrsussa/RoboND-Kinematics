@@ -2,6 +2,7 @@ from sympy import *
 from time import time
 from mpmath import radians
 import tf
+import numpy as np
 
 '''
 Format of test case is [ [[EE position],[EE orientation as quaternions]],[WC location],[joint angles]]
@@ -144,7 +145,7 @@ def test_code(test_case):
 
     #triangle sides
 
-    A = 1.501 #from URDF file
+    A = 0.96#1.501 #from URDF file
     C = 1.25 #from DH table
     #B = sqrt(pow((sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - DH_table[a1]), 2) + pow(wc[2] - DH_table[d1],2))
     B = sqrt(pow((sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - DH_table[a1]), 2) + pow((wc[2] - DH_table[d1]),2))
@@ -180,14 +181,39 @@ def test_code(test_case):
 
     print('Calculating rotation matrix for joints 3-6')
 
-    R3_6 = R0_3.inv("LU") * rot_ee
+    #R3_6 = simplify(R0_3.inv("LU") * rot_ee)
+    R3_6 = simplify(R0_3.transpose() * rot_ee)
+    #theta4, theta5, theta6 = tf.transformations.euler_from_matrix(R3_6.tolist(), 'ryzy')
 
     print('Calculating thetas 3-6')
 
-    theta4 = atan2(R3_6[2,2], -R3_6[0,2]) % ((pi).evalf())
+    print('thetas 5')
     theta5 = atan2(sqrt(R3_6[0,2] * R3_6[0,2] + R3_6[2,2] * R3_6[2,2]), R3_6[1,2])
-    theta6 = atan2(-R3_6[1,1], R3_6[1,0]).evalf()#  % ((pi).evalf())
-    print(theta6)
+    print(theta5)
+    if np.abs(R3_6[1,2]) is not 1:
+        theta5 = np.float64(atan2( sqrt(R3_6[0,2]**2 + R3_6[2,2]**2), R3_6[1,2] ))
+        if sin(theta5) < 0:
+            theta4 = np.float64(atan2(-R3_6[2,2], R3_6[0,2]))
+            theta6 = np.float64(atan2(R3_6[1,1], -R3_6[1,0]))
+        else:
+            theta4 = np.float64(atan2(R3_6[2,2], -R3_6[0,2]))
+            theta6 = np.float64(atan2(-R3_6[1,1], R3_6[1,0]))
+    else:
+        theta6 = save_theta[5]
+        if R3_6[1,2] == 1:
+            theta5 = np.float64(0)
+            theta4 = np.float64(-theta6 + atan2(-R3_6[0,1], -R3_6[2,1]))
+        else:
+            theta5 = np.float64(0)
+            theta4 = np.float64(theta6 - atan2(R3_6[0,1], -R3_6[2,1]))
+                                                                                                                        
+
+
+
+    print('thetas 4')
+    print(theta4)
+    print('-----thetas 4')
+    print('-----thetas 4')
 
     ## 
     ########################################################################################

@@ -18,6 +18,7 @@ from geometry_msgs.msg import Pose
 from mpmath import *
 from sympy import *
 from math import copysign
+import numpy as np
 
 
 def Get_TFMartix(d, a, q, alpha):
@@ -76,6 +77,8 @@ def handle_calculate_IK(req):
 	#
 	#
 	# Extract rotation matrices from the transformation matrices
+
+        prev_thetas = (0,0,0,0,0,0)
 
         r, p, y = symbols('r p y')
 
@@ -155,9 +158,11 @@ def handle_calculate_IK(req):
 
             #print('Calculating first 3 thetas')
 
+
+
             theta1 = atan2(wc[1], wc[0])
-            theta2 = pi/2 - a - atan2(wc[2] - DH_table[d1], sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - DH_table[a1]) % (2*pi)
-            theta3 = pi/2 - (b + offset_angle) % (2*pi)
+            theta2 = pi/2 - a - atan2(wc[2] - DH_table[d1], sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - DH_table[a1])# % (2*pi)
+            theta3 = pi/2 - (b + offset_angle)# % (2*pi)
 
             #print('Calculating rotation matrix for joints 1-3')
 
@@ -172,18 +177,85 @@ def handle_calculate_IK(req):
             #print('Calculating rotation matrix for joints 3-6')
 
             R3_6 = R0_3.inv("LU") * rot_ee
+            #if np.abs(R3_6[1,2]) is not 1:
+            #    theta5 = np.float64(atan2(sqrt(R3_6[0,2]**2 + R3_6[2,2]**2), R3_6[1,2]))
+            #    if sin(theta5) < 0:
+            #        theta4 = np.float64(atan2(-R3_6[2,2], R3_6[0,2]))
+            #        theta6 = np.float64(atan2(R3_6[1,1], -R3_6[1,0]))
+            #    else:
+            #        theta4 = np.float64(atan2(R3_6[2,2], -R3_6[0,2]))
+            #        theta6 = np.float64(atan2(-R3_6[1,1], R3_6[1,0]))
+            #else:
+            #    theta6 = save_theta[5]
+            #    if R3_6[1,2] == 1:
+            #        theta5 = np.float64(0)
+            #        theta4 = np.float64(-theta6 + atan2(-R3_6[0,1], -R3_6[2,1]))
+            #    else:
+            #        theta5 = np.float64(0)
+            #        theta4 = np.float64(theta6 - atan2(R3_6[0,1], -R3_6[2,1]))
+
+            theta4 = (atan2(R3_6[2,2],-R3_6[0,2])).evalf()
+            theta5 = (atan2(sqrt((R3_6[0,2])**2 + (R3_6[2,2])**2), R3_6[1,2])).evalf()
+            theta6 = (atan2(-R3_6[1,1],R3_6[1,0])).evalf()
+
+
+	    if sin(theta5) < 0:
+		theta4 = (atan2(-R3_6[2,2],R3_6[0,2])).evalf()
+		theta6 = (atan2(R3_6[1,1],-R3_6[1,0])).evalf()
+		print("-------------> S5 < 0 ")
+
+	    # Check wrist singularity
+	    if abs(theta5) < 0.01: 
+		theta4 = prev_thetas[3] # keep q4 current value
+		theta46 = atan2(-R3_6[0,1], -R3_6[2,1]).evalf()
+		theta6 = theta46 - theta4
+		print("-------------> A wrist singularity reached!")
+
+	    # Check large angular displacements
+	    delta_4 = theta4 - prev_thetas[3] # compute displacement to new angle
+	    delta_5 = theta5 - prev_thetas[4]
+	    delta_6 = theta6 - prev_thetas[5]
+	    
+	    while delta_4 > pi:                          # check if displacement to large
+		theta4 = prev_thetas[3]  + (delta_4  - 2*pi) # if so, compute shorter displacement to same point
+		delta_4 = theta4 - prev_thetas[3]           # check if new difference is small enough
+		print("delta_4 > pi")
+	    while(delta_4  < -pi):
+		theta4 = prev_thetas[3] + (delta_4  + 2*pi)
+		delta_4 = theta4 - prev_thetas[3]# 
+		print("delta_4 < -pi")
+
+	    while(delta_5 > pi):
+		theta5 = prev_thetas[4] + (delta_5 - 2*pi)
+		delta_5 = theta5 - prev_thetas[4] #
+		print("delta_5 > pi")
+	    while(delta_5 < -pi):
+		theta5 = prev_thetas[4] + (delta_5 + 2*pi)
+		delta_5 = theta5 - prev_thetas[4] #
+		print("delta_5 < -pi")
+
+	    while(delta_6 > pi):
+		theta6 = prev_thetas[5] + (delta_6 - 2*pi)
+		delta_6 = theta6 - prev_thetas[5] #
+		print("delta_6 > pi")
+	    while(delta_6 < -pi):
+		theta6 = prev_thetas[5] + (delta_6 + 2*pi)
+		delta_6 = theta6 - prev_thetas[5] #
+		print("delta_6 < -pi")
+
 
             #print('Calculating thetas 3-6')
 
-            theta4 = atan2(R3_6[2,2], -R3_6[0,2]) % ((2*pi).evalf())
-            theta5 = atan2(sqrt(R3_6[0,2] * R3_6[0,2] + R3_6[2,2] * R3_6[2,2]), R3_6[1,2]) % ((2*pi).evalf())
-            theta6 = atan2(-R3_6[1,1], R3_6[1,0]) % ((2*pi).evalf)
+            #theta4 = atan2(R3_6[2,2], -R3_6[0,2])# % ((2*pi).evalf())
+            #theta5 = atan2(sqrt(R3_6[0,2] * R3_6[0,2] + R3_6[2,2] * R3_6[2,2]), R3_6[1,2])# % ((2*pi).evalf())
+            #theta6 = atan2(-R3_6[1,1], R3_6[1,0])# % ((2*pi).evalf)
+
+            prev_thetas = (theta1, theta2, theta3, theta4, theta5, theta6)
 	    #
             ###
 		
             # Populate response for the IK request
             # In the next line replace theta1,theta2...,theta6 by your joint angle variables
-            #print([theta1, theta2, theta3, theta4, theta5, theta6])
 	    joint_trajectory_point.positions = [theta1, theta2, theta3, theta4, theta5, theta6]
 	    joint_trajectory_list.append(joint_trajectory_point)
 
