@@ -21,13 +21,13 @@
 [image2]: ./misc_images/misc3.png
 [image3]: ./misc_images/misc2.png
 
-[DH_parameters]: ./misc_images/DH_parameters.png
-[triangle_sides]: ./misc_images/triangle_sides.png
-[thetas1-3]: ./misc_images/thetas1-3.png
+[DH_parameters]: ./misc_images/DH_parameters.jpg
+[triangle_sides]: ./misc_images/triangle_sides.jpg
+[thetas1-3]: ./misc_images/thetas1-3.jpg
 [thetas4-6]: ./misc_images/thetas4-6.jpg
-[transform_matrices]: ./misc_images/transform_matrices.png
-[rotation_matrices]: ./misc_images/rotation_matrices.png
-[correction_matrix]: ./misc_images/correction_matrix.png
+[transform_matrices]: ./misc_images/transform_matrices.jpg
+[rotation_matrices]: ./misc_images/rotation_matrices.jpg
+[correction_matrix]: ./misc_images/correction_matrix.jpg
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/972/view) Points
 ### Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
