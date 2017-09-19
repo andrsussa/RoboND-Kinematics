@@ -21,9 +21,13 @@
 [image2]: ./misc_images/misc3.png
 [image3]: ./misc_images/misc2.png
 
+[DH_parameters]: ./misc_images/DH_parameters.png
+[triangle_sides]: ./misc_images/triangle_sides.png
+[thetas1-3]: ./misc_images/thetas1-3.png
 [thetas4-6]: ./misc_images/thetas4-6.jpg
+[transform_matrices]: ./misc_images/transform_matrices.png
 [rotation_matrices]: ./misc_images/rotation_matrices.png
-[image3]: ./misc_images/misc2.png
+[correction_matrix]: ./misc_images/correction_matrix.png
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/972/view) Points
 ### Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
@@ -38,9 +42,8 @@ You're reading it!
 ### Kinematic Analysis
 #### 1. Run the forward_kinematics demo and evaluate the kr210.urdf.xacro file to perform kinematic analysis of Kuka KR210 robot and derive its DH parameters.
 
-Here is an example of how to include an image in your writeup.
 
-![alt text][image1]
+![alt text][DH_parameters]
 
 DH-Table
 
@@ -57,13 +60,33 @@ T6_G | 0 | 0 | 0.303 | 0
 
 #### 2. Using the DH parameter table you derived earlier, create individual transformation matrices about each joint. In addition, also generate a generalized homogeneous transform between base_link and gripper_link using only end-effector(gripper) pose.
 
+#####2.1 Individual transformation matrices
+
+![alt text][transform_matrices]
+
+#####2.1 (transformation matrices continued) + Rotation correction matrix
+
+![alt text][correction_matrix]
+
+
+#####2.2 Calculating rotation matrices and wrist center position
+
+![alt text][rotation_matrices]
 
 
 
 #### 3. Decouple Inverse Kinematics problem into Inverse Position Kinematics and inverse Orientation Kinematics; doing so derive the equations to calculate all individual joint angles.
  
 
-And here's where you can draw out and show your math for the derivation of your theta angles. 
+##### 3.1 Calculating triangle sides
+
+![alt text][triangle_sides]
+
+##### 3.2 Calculating triangle angles and Thetas 1-3
+
+![alt text][thetas1-3]
+
+##### 3.3 Calculating triangle angles and Thetas 4-6
 
 ![alt text][thetas4-6]
 
