@@ -177,22 +177,24 @@ def handle_calculate_IK(req):
             #print('Calculating rotation matrix for joints 3-6')
 
             R3_6 = R0_3.inv("LU") * rot_ee
-            #if np.abs(R3_6[1,2]) is not 1:
-            #    theta5 = np.float64(atan2(sqrt(R3_6[0,2]**2 + R3_6[2,2]**2), R3_6[1,2]))
-            #    if sin(theta5) < 0:
-            #        theta4 = np.float64(atan2(-R3_6[2,2], R3_6[0,2]))
-            #        theta6 = np.float64(atan2(R3_6[1,1], -R3_6[1,0]))
-            #    else:
-            #        theta4 = np.float64(atan2(R3_6[2,2], -R3_6[0,2]))
-            #        theta6 = np.float64(atan2(-R3_6[1,1], R3_6[1,0]))
-            #else:
-            #    theta6 = save_theta[5]
-            #    if R3_6[1,2] == 1:
-            #        theta5 = np.float64(0)
-            #        theta4 = np.float64(-theta6 + atan2(-R3_6[0,1], -R3_6[2,1]))
-            #    else:
-            #        theta5 = np.float64(0)
-            #        theta4 = np.float64(theta6 - atan2(R3_6[0,1], -R3_6[2,1]))
+            '''
+            if np.abs(R3_6[1,2]) is not 1:
+                theta5 = np.float64(atan2(sqrt(R3_6[0,2]**2 + R3_6[2,2]**2), R3_6[1,2]))
+                if sin(theta5) < 0:
+                    theta4 = np.float64(atan2(-R3_6[2,2], R3_6[0,2]))
+                    theta6 = np.float64(atan2(R3_6[1,1], -R3_6[1,0]))
+                else:
+                    theta4 = np.float64(atan2(R3_6[2,2], -R3_6[0,2]))
+                    theta6 = np.float64(atan2(-R3_6[1,1], R3_6[1,0]))
+            else:
+                theta6 = prev_thetas[5]
+                if R3_6[1,2] == 1:
+                    theta5 = np.float64(0)
+                    theta4 = np.float64(-theta6 + atan2(-R3_6[0,1], -R3_6[2,1]))
+                else:
+                    theta5 = np.float64(0)
+                    theta4 = np.float64(theta6 - atan2(R3_6[0,1], -R3_6[2,1]))
+            '''
 
             theta4 = (atan2(R3_6[2,2],-R3_6[0,2])).evalf()
             theta5 = (atan2(sqrt((R3_6[0,2])**2 + (R3_6[2,2])**2), R3_6[1,2])).evalf()
@@ -212,10 +214,11 @@ def handle_calculate_IK(req):
 		print("-------------> A wrist singularity reached!")
 
 	    # Check large angular displacements
-	    delta_4 = theta4 - prev_thetas[3] # compute displacement to new angle
-	    delta_5 = theta5 - prev_thetas[4]
-	    delta_6 = theta6 - prev_thetas[5]
+	    #delta_4 = theta4 - prev_thetas[3] # compute displacement to new angle
+	    #delta_5 = theta5 - prev_thetas[4]
+	    #delta_6 = theta6 - prev_thetas[5]
 	    
+            '''
 	    while delta_4 > pi:                          # check if displacement to large
 		theta4 = prev_thetas[3]  + (delta_4  - 2*pi) # if so, compute shorter displacement to same point
 		delta_4 = theta4 - prev_thetas[3]           # check if new difference is small enough
@@ -242,6 +245,10 @@ def handle_calculate_IK(req):
 		theta6 = prev_thetas[5] + (delta_6 + 2*pi)
 		delta_6 = theta6 - prev_thetas[5] #
 		print("delta_6 < -pi")
+            '''
+            #theta4 = correct_thetas(theta4, prev_thetas[3])
+            #theta5 = correct_thetas(theta4, prev_thetas[4])
+            #theta6 = correct_thetas(theta4, prev_thetas[5])
 
 
             #print('Calculating thetas 3-6')
@@ -261,6 +268,17 @@ def handle_calculate_IK(req):
 
         rospy.loginfo("length of Joint Trajectory List: %s" % len(joint_trajectory_list))
         return CalculateIKResponse(joint_trajectory_list)
+
+def correct_thetas(theta, prev_theta):
+    delta = theta - prev_theta
+    if delta > pi:              
+        theta = prev_theta  + (delta - 2*pi) 
+        delta = theta - prev_theta  
+    if delta  < -pi:
+        theta = prev_theta + (delta + 2*pi)
+        delta = theta - prev_theta
+    return theta
+
 
 
 def IK_server():
