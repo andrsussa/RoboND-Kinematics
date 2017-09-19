@@ -65,7 +65,7 @@ T6_G | 0 | 0 | 0.303 | 0
 
 And here's where you can draw out and show your math for the derivation of your theta angles. 
 
-![alt text][image2]
+![alt text][thetas4-6]
 
 ### Project Implementation
 
