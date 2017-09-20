@@ -21,15 +21,6 @@ from math import copysign
 import numpy as np
 
 
-def Get_TFMartix(d, a, q, alpha):
-    TF_Matrix = Matrix([
-        [ cos(q),               -sin(q),            0,              a    ],
-        [sin(q)*cos(alpha), cos(q)*cos(alpha), -sin(alpha), -sin(alpha)*d],
-        [sin(q)*sin(alpha), cos(q)*sin(alpha),  cos(alpha),  cos(alpha)*d],
-        [       0,                  0,              0,              1    ]
-        ])
-    return TF_Matrix
-
 
 def handle_calculate_IK(req):
     rospy.loginfo("Received %s eef-poses from the plan" % len(req.poses))
@@ -45,8 +36,8 @@ def handle_calculate_IK(req):
         a0, a1, a2, a3, a4, a5, a6 = symbols('a0:7')
         q1, q2, q3, q4, q5, q6, q7 = symbols('q1:8')
         alp0, alp1, alp2, alp3, alp4, alp5, alp6 = symbols('alp0:7')
-	#
-	#   
+
+
 	# Create Modified DH parameters
 
         DH_table = { 
@@ -58,9 +49,10 @@ def handle_calculate_IK(req):
                 alp5: -pi/2.0,  a5:      0,  d6:     0, q6:  q6,
                 alp6: 0,        a6:      0,  d7: 0.303, q7:  0
                 }
-	#
 	#            
 	# Define Modified DH Transformation matrix
+
+	# Create individual transformation matrices
 
         T0_1 = Get_TFMartix(d1, a0, q1, alp0).subs(DH_table)
         T1_2 = Get_TFMartix(d2, a1, q2, alp1).subs(DH_table)
@@ -71,14 +63,9 @@ def handle_calculate_IK(req):
         T6_EE = Get_TFMartix(d7, a6, q7, alp6).subs(DH_table)
 
         T0_EE = T0_1 * T1_2 * T2_3 * T3_4 * T4_5 * T5_6 * T6_EE
-	#
-	#
-	# Create individual transformation matrices
-	#
-	#
+
 	# Extract rotation matrices from the transformation matrices
 
-        prev_thetas = (0,0,0,0,0,0)
 
         r, p, y = symbols('r p y')
 
@@ -98,19 +85,21 @@ def handle_calculate_IK(req):
 
         rot_ee = rot_z * rot_y * rot_x * rot_err
 
-	#
-	#
-        ###
+
+        #keep values of previously calculated thetas
+        prev_thetas = (0,0,0,0,0,0)
 
         # Initialize service response
         joint_trajectory_list = []
         for x in xrange(0, len(req.poses)):
+
             # IK code starts here
             joint_trajectory_point = JointTrajectoryPoint()
 
 	    # Extract end-effector position and orientation from request
 	    # px,py,pz = end-effector position
 	    # roll, pitch, yaw = end-effector orientation
+
             px = req.poses[x].position.x
             py = req.poses[x].position.y
             pz = req.poses[x].position.z
@@ -120,146 +109,71 @@ def handle_calculate_IK(req):
                     req.poses[x].orientation.z, req.poses[x].orientation.w])
      
             ### Your IK code here 
+
 	    # Compensate for rotation discrepancy between DH parameters and Gazebo
-	    #
+
             rot_ee = rot_ee.subs({'r':roll, 'p':pitch, 'y':yaw})
-	    #
+
 	    # Calculate joint angles using Geometric IK method
 	    #
 
             ee_vector = Matrix([[px], [py], [pz]])
 
-            #'Calculating coordinates of Wrist Center'
+            #Calculating coordinates of Wrist Center'
 
             wc = ee_vector - (0.303) * rot_ee[:,2]
 
-            #calculate geometry for first 3 joints
+            #Calculate geometry for first 3 joints
 
-            #print('Calculating geometry for first 3 joints')
-
-            #triangle sides
+            #Calculating triangle sides
 
             A = 1.501 #from URDF file
             C = 1.25 #from DH table
-            #B = sqrt(pow((sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - DH_table[a1]), 2) + pow(wc[2] - DH_table[d1],2))
             B = sqrt(pow((sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - DH_table[a1]), 2) + pow((wc[2] - DH_table[d1]),2))
-            #print('Calculating triangle angles')
 
-            #triangle angles
+            #Calculating triangle angles
             a = acos((B*B + C*C - A*A) / (2 * B * C))
             b = acos((A*A + C*C - B*B) / (2 * A * C))
             c = acos((A*A + B*B - C*C) / (2 * A * B))
 
             # to compensate 55mm offset in link4
-            #offset_angle = atan2(0.054, 1.501)
-            offset_angle = atan2(abs(DH_table[a3]), A)
 
-            #print(offset_angle)
-
-            #print('Calculating first 3 thetas')
-
-
+            e = atan2(abs(DH_table[a3]), A) 
 
             theta1 = atan2(wc[1], wc[0])
-            theta2 = pi/2 - a - atan2(wc[2] - DH_table[d1], sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - DH_table[a1])# % (2*pi)
-            theta3 = pi/2 - (b + offset_angle)# % (2*pi)
+            theta2 = pi/2 - a - atan2(wc[2] - DH_table[d1], sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - DH_table[a1])
+            theta3 = pi/2 - (b + e)
 
-            #print('Calculating rotation matrix for joints 1-3')
 
             R0_3 = T0_1[0:3, 0:3] * T1_2[0:3, 0:3] * T2_3[0:3, 0:3] 
             R0_3 = R0_3.evalf(subs={q1: theta1, q2: theta2, q3: theta3})
 
 
-            #print('Inverting R0_3 matrix')
-
-            #R0_3_inv = R0_3.inv("LU")
-
-            #print('Calculating rotation matrix for joints 3-6')
-
             R3_6 = R0_3.inv("LU") * rot_ee
-            '''
-            if np.abs(R3_6[1,2]) is not 1:
-                theta5 = np.float64(atan2(sqrt(R3_6[0,2]**2 + R3_6[2,2]**2), R3_6[1,2]))
-                if sin(theta5) < 0:
-                    theta4 = np.float64(atan2(-R3_6[2,2], R3_6[0,2]))
-                    theta6 = np.float64(atan2(R3_6[1,1], -R3_6[1,0]))
-                else:
-                    theta4 = np.float64(atan2(R3_6[2,2], -R3_6[0,2]))
-                    theta6 = np.float64(atan2(-R3_6[1,1], R3_6[1,0]))
-            else:
-                theta6 = prev_thetas[5]
-                if R3_6[1,2] == 1:
-                    theta5 = np.float64(0)
-                    theta4 = np.float64(-theta6 + atan2(-R3_6[0,1], -R3_6[2,1]))
-                else:
-                    theta5 = np.float64(0)
-                    theta4 = np.float64(theta6 - atan2(R3_6[0,1], -R3_6[2,1]))
-            '''
 
             theta4 = (atan2(R3_6[2,2],-R3_6[0,2])).evalf()
             theta5 = (atan2(sqrt((R3_6[0,2])**2 + (R3_6[2,2])**2), R3_6[1,2])).evalf()
             theta6 = (atan2(-R3_6[1,1],R3_6[1,0])).evalf()
 
 
+            #pick solution based on in which quarter theta5 is located (sin(theta5) will change sign accordingly)
 	    if sin(theta5) < 0:
 		theta4 = (atan2(-R3_6[2,2],R3_6[0,2])).evalf()
 		theta6 = (atan2(R3_6[1,1],-R3_6[1,0])).evalf()
-		print("-------------> S5 < 0 ")
 
 	    # Check wrist singularity
 	    if abs(theta5) < 0.01: 
 		theta4 = prev_thetas[3] # keep q4 current value
-		theta46 = atan2(-R3_6[0,1], -R3_6[2,1]).evalf()
-		theta6 = theta46 - theta4
-		print("-------------> A wrist singularity reached!")
-
-	    # Check large angular displacements
-	    #delta_4 = theta4 - prev_thetas[3] # compute displacement to new angle
-	    #delta_5 = theta5 - prev_thetas[4]
-	    #delta_6 = theta6 - prev_thetas[5]
-	    
-            '''
-	    while delta_4 > pi:                          # check if displacement to large
-		theta4 = prev_thetas[3]  + (delta_4  - 2*pi) # if so, compute shorter displacement to same point
-		delta_4 = theta4 - prev_thetas[3]           # check if new difference is small enough
-		print("delta_4 > pi")
-	    while(delta_4  < -pi):
-		theta4 = prev_thetas[3] + (delta_4  + 2*pi)
-		delta_4 = theta4 - prev_thetas[3]# 
-		print("delta_4 < -pi")
-
-	    while(delta_5 > pi):
-		theta5 = prev_thetas[4] + (delta_5 - 2*pi)
-		delta_5 = theta5 - prev_thetas[4] #
-		print("delta_5 > pi")
-	    while(delta_5 < -pi):
-		theta5 = prev_thetas[4] + (delta_5 + 2*pi)
-		delta_5 = theta5 - prev_thetas[4] #
-		print("delta_5 < -pi")
-
-	    while(delta_6 > pi):
-		theta6 = prev_thetas[5] + (delta_6 - 2*pi)
-		delta_6 = theta6 - prev_thetas[5] #
-		print("delta_6 > pi")
-	    while(delta_6 < -pi):
-		theta6 = prev_thetas[5] + (delta_6 + 2*pi)
-		delta_6 = theta6 - prev_thetas[5] #
-		print("delta_6 < -pi")
-            '''
-            #theta4 = correct_thetas(theta4, prev_thetas[3])
-            #theta5 = correct_thetas(theta4, prev_thetas[4])
-            #theta6 = correct_thetas(theta4, prev_thetas[5])
+		theta6 = atan2(-R3_6[0,1], -R3_6[2,1]).evalf() - theta4
 
 
-            #print('Calculating thetas 3-6')
+	    # Correct angles to fit in (-pi, pi) interval
+            theta4 = correct_thetas(theta4, prev_thetas[3])
+            theta5 = correct_thetas(theta5, prev_thetas[4])
+            theta6 = correct_thetas(theta6, prev_thetas[5])
 
-            #theta4 = atan2(R3_6[2,2], -R3_6[0,2])# % ((2*pi).evalf())
-            #theta5 = atan2(sqrt(R3_6[0,2] * R3_6[0,2] + R3_6[2,2] * R3_6[2,2]), R3_6[1,2])# % ((2*pi).evalf())
-            #theta6 = atan2(-R3_6[1,1], R3_6[1,0])# % ((2*pi).evalf)
-
+            #save calculated thetas to use for next trajectory point
             prev_thetas = (theta1, theta2, theta3, theta4, theta5, theta6)
-	    #
-            ###
 		
             # Populate response for the IK request
             # In the next line replace theta1,theta2...,theta6 by your joint angle variables
@@ -279,6 +193,14 @@ def correct_thetas(theta, prev_theta):
         delta = theta - prev_theta
     return theta
 
+def Get_TFMartix(d, a, q, alpha):
+    TF_Matrix = Matrix([
+        [ cos(q),               -sin(q),            0,              a    ],
+        [sin(q)*cos(alpha), cos(q)*cos(alpha), -sin(alpha), -sin(alpha)*d],
+        [sin(q)*sin(alpha), cos(q)*sin(alpha),  cos(alpha),  cos(alpha)*d],
+        [       0,                  0,              0,              1    ]
+        ])
+    return TF_Matrix
 
 
 def IK_server():
