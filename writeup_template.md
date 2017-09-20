@@ -60,16 +60,16 @@ T6_G | 0 | 0 | 0.303 | 0
 
 #### 2. Using the DH parameter table you derived earlier, create individual transformation matrices about each joint. In addition, also generate a generalized homogeneous transform between base_link and gripper_link using only end-effector(gripper) pose.
 
-#####2.1 Individual transformation matrices
+##### 2.1 Individual transformation matrices
 
 ![alt text][transform_matrices]
 
-#####2.1 (transformation matrices continued) + Rotation correction matrix
+##### 2.1 (transformation matrices continued) + Rotation correction matrix
 
 ![alt text][correction_matrix]
 
 
-#####2.2 Calculating rotation matrices and wrist center position
+##### 2.2 Calculating rotation matrices and wrist center position
 
 ![alt text][rotation_matrices]
 
@@ -95,7 +95,10 @@ T6_G | 0 | 0 | 0.303 | 0
 #### 1. Fill in the `IK_server.py` file with properly commented python code for calculating Inverse Kinematics based on previously performed Kinematic Analysis. Your code must guide the robot to successfully complete 8/10 pick and place cycles. Briefly discuss the code you implemented and your results. 
 
 
-Here I'll talk about the code, what techniques I used, what worked and why, where the implementation might fail and how I might improve it if I were going to pursue this project further.  
+After I all calculations have been done on paper, programming part was actually pretty straight forward:
+1. Implemented IK calculations in IK_debug.py script, and it worked perfetly only for 1-st test case. As per suggestion I had to implement FK calculations as well in order to check previously calculated IK solution.
+2. Moved code to IK_server.py and run simulator. Although it was seemed to be moving along the suggested trajectory, values of thetas3-6 apparently were way off optimal - kuka was swinging its wrist like crazy
+
 
 
 And just for fun, another example image:
