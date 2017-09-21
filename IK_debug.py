@@ -137,7 +137,7 @@ def test_code(test_case):
 
     print('Calculating coordinates of Wrist Center')
 
-    wc = ee_vector - (0.303) * rot_ee[:,2]
+    wc = ee_vector - (DH_table[d7]) * rot_ee[:,2]
 
     #calculate geometry for first 3 joints
 
@@ -148,7 +148,7 @@ def test_code(test_case):
     A = 1.501 #from URDF file
     C = 1.25 #from DH table
     B = sqrt(pow((sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - DH_table[a1]), 2) + pow((wc[2] - DH_table[d1]),2))
-    print('Calculating triangle angles')
+    print('Calculating triangle ABC angles')
 
     #triangle angles
     a = acos((B*B + C*C - A*A) / (2 * B * C))
@@ -156,12 +156,11 @@ def test_code(test_case):
     c = acos((A*A + B*B - C*C) / (2 * A * B))
 
     # to compensate 55mm offset in link4
-    #offset_angle = atan2(0.054, 1.501)
     offset_angle = atan2(abs(DH_table[a3]), A)
 
     print(offset_angle)
 
-    print('Calculating first 3 thetas')
+    print('Calculating thetas 1-3')
 
     theta1 = atan2(wc[1], wc[0]).evalf()
     theta2 = pi/2 - a - atan2(wc[2] - DH_table[d1], sqrt(wc[0]*wc[0] + wc[1]*wc[1]) - DH_table[a1])
@@ -178,15 +177,9 @@ def test_code(test_case):
     R3_6 = R3_6.evalf()
 
 
-    #print('Inverting R0_3 matrix')
 
-    #R0_3_inv = R0_3.inv("LU")
-
-    print('Calculating rotation matrix for joints 3-6')
-
-
-    print('Calculating thetas 3-6')
-    theta4 = (atan2(R3_6[2,2],-R3_6[0,2])).evalf()
+    print('Calculating thetas 4-6')
+    theta4 = (atan2(R3_6[2,2],-R3_6[0,2])
     theta5 = (atan2(sqrt((R3_6[0,2])**2 + (R3_6[2,2])**2), R3_6[1,2])).evalf()
     theta6 = (atan2(-R3_6[1,1],R3_6[1,0])).evalf()
 

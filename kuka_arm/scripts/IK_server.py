@@ -121,7 +121,7 @@ def handle_calculate_IK(req):
 
             #Calculating coordinates of Wrist Center'
 
-            wc = ee_vector - (0.303) * rot_ee[:,2]
+            wc = ee_vector - (DH_table[d7]) * rot_ee[:,2]
 
             #Calculate geometry for first 3 joints
 
