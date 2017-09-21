@@ -104,7 +104,7 @@ T6_G | 0 | 0 | 0.303 | 0
 #### 1. Fill in the `IK_server.py` file with properly commented python code for calculating Inverse Kinematics based on previously performed Kinematic Analysis. Your code must guide the robot to successfully complete 8/10 pick and place cycles. Briefly discuss the code you implemented and your results. 
 
 
-*  After I all calculations have been done on paper, programming part was actually pretty straight forward:
+*  After all calculations have been done on paper, programming part was actually pretty straight forward:
 1. Implemented IK calculations in IK_debug.py script, and it worked perfetly only for 1-st test case. As per suggestion I had to implement FK calculations as well in order to check previously calculated IK solution.
 2. Moved code to IK_server.py and run simulator. Although it was seemed to be moving along the suggested trajectory, values of thetas3-6 apparently were way off optimal - kuka was swinging its wrist and even kicked out target couple of times. The following steps have been introduced to improve quality of theta angles:
     1. Detecting and resolving wrist gimbal lock if theta5 ~ 0
@@ -116,7 +116,7 @@ T6_G | 0 | 0 | 0.303 | 0
 1. Although speed and accuracy of arm movement was noticeably increased, it was still pretty slow. There is still a lot to improve in for theta3-6 calculation/filtering algorithm
 2. IK calculation for every trajectory point takes significant time, which probably could be decreased by using nupmy as a main matrix manipulation library, rather than sympy
 
-Below are couple screenshots of final results
+Below are couple of screenshots of final results:
 
 ![kuka arm final][kuka_arm0]
 ![kuka arm final][kuka_arm1]
