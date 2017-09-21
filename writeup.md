@@ -107,7 +107,7 @@ T6_G | 0 | 0 | 0.303 | 0
 *  After all calculations have been done on paper, programming part was actually pretty straight forward:
 1. Implemented IK calculations in IK_debug.py script, and it worked perfetly only for 1-st test case. As per suggestion I had to implement FK calculations as well in order to check previously calculated IK solution.
 2. Moved code to IK_server.py and run simulator. Although it was seemed to be moving along the suggested trajectory, values of thetas3-6 apparently were way off optimal - kuka was swinging its wrist and even kicked out target couple of times. The following steps have been introduced to improve quality of theta angles:
-    1. Detecting and resolving wrist gimbal lock if theta5 ~ 0
+    1. Detecting and resolving wrist gimbal lock if theta5 == 0
     2. Correcting theta3-6 to fit into (-pi, pi) range and pick closest path from previous angle to current angle
     3. Chosing solution based on sign of sin(theta5)  (sign shows in which quarter theta5 is located)
 
